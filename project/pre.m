@@ -1,26 +1,15 @@
 clear
 clc
 
-global N P number_of_samples
+global N P number_of_samples B
 
-N = 50; % number of nodes
+N = 40; % number of nodes
 
 P = 6; % split the work into P parts for parellel computing 
-number_of_samples = 1; % number of samples of each part
+number_of_samples = 150; % number of samples of each part
 
-% ---------------- generate random skew-sym matrix ------------------
-C = zeros(N,N); 
-
-for i = 1:N-1
-    for j = i+1:N
-        C(i,j) = normrnd(0,1); % normal r.v.
-        while abs(C(i,j)) > 10;
-            C(i,j) = normrnd(0,1); % trancate by [-10,10]
-        end
-        C(i,j) = -C(i,j);
-    end
-end
-
+C = zeros(N,N); % random skew-sym matrix 
+B = 100; % bound on elements
 
 % % ----- create bash file for running under Linux -----
 % runLin = fopen('runLin5','w'); 
@@ -36,6 +25,19 @@ for mm = 1:P
 for nn = (mm-1)*number_of_samples+1:mm*number_of_samples
     
     % create input files for Perseus under the folder "input"
+    
+    % ---------------- generate random skew-sym matrix ------------------
+    for i = 1:N-1
+    for j = i+1:N
+        C(i,j) = randi([-B,B]); % normal r.v.
+%         C(i,j) = normrnd(0,1); % normal r.v.
+%         while abs(C(i,j)) > 10;
+%             C(i,j) = normrnd(0,1); % trancate by [-10,10]
+%         end
+        C(j,i) = -C(i,j);
+    end
+    end
+    
     file_name = ['input\',num2str(nn,'%04d'),'.txt']; 
     file = fopen(file_name,'w');
     
@@ -57,7 +59,7 @@ for nn = (mm-1)*number_of_samples+1:mm*number_of_samples
     for i = 1:N-2
         for j = i+1:N-1
             for k = j+1:N
-                 t = ceil(abs(C(i,j)+C(j,k)+C(k,i))*10000)+1;
+                 t = ceil(abs(C(i,j)+C(j,k)+C(k,i)))+1;
                  fprintf(file,'2 %d %d %d %d \n', i, j, k, t);
             end
         end
@@ -65,7 +67,7 @@ for nn = (mm-1)*number_of_samples+1:mm*number_of_samples
     
     fclose(file);
     
-    fprintf(runWin, 'perseusWin.exe nmfsimtop %s %s\n', file_name, outputfile_name);
+    fprintf(runWin, '..\\perseusWin.exe nmfsimtop ..\\%s ..\\%s\n', file_name, outputfile_name);
 %     fprintf(runLin, 'perseusLin nmfsimtop %s %s\n', file_name, outputfile_name);
 end
  
